@@ -38,8 +38,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadInitialData();
   initFilters();
   initEventListeners();
+  setupSyncButtonForPlatform();
   renderDashboard();
 });
+
+function isLocalEnvironment() {
+  return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+}
+
+function setupSyncButtonForPlatform() {
+  const btn = document.getElementById('btn-sync-outlook');
+  if (!btn) return;
+
+  if (!isLocalEnvironment()) {
+    // We are on GitHub Pages / Cloud
+    btn.innerHTML = `<i data-lucide="cloud-check" class="w-3.5 h-3.5"></i> <span>Info Sincronización</span>`;
+    btn.className = "px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold flex items-center gap-2 transition text-xs border border-slate-700";
+    if (window.lucide) lucide.createIcons();
+  }
+}
 
 async function loadInitialData() {
   if (!SUMMARY.months || SUMMARY.months.length === 0) {
@@ -85,9 +102,11 @@ function updateDateDropdown() {
     dateSelect.value = selectedDate;
 
     const slider = document.getElementById('playback-slider');
-    slider.max = dates.length;
-    slider.value = dates.length;
-    document.getElementById('playback-day-label').textContent = dates[dates.length - 1].slice(8);
+    if (slider) {
+      slider.max = dates.length;
+      slider.value = dates.length;
+      document.getElementById('playback-day-label').textContent = dates[dates.length - 1].slice(8);
+    }
   } else {
     dateSelect.innerHTML = `<option value="">Sin datos</option>`;
     selectedDate = "";
@@ -156,6 +175,7 @@ function toggleCompareAll() {
 
 function updateCompareButtonUI() {
   const btn = document.getElementById('btn-compare-all');
+  if (!btn) return;
   if (isCompareAllMode) {
     btn.classList.add('active-toggle', 'ring-2', 'ring-blue-400');
     document.getElementById('btn-compare-all-label').textContent = '✓ Modo Comparativo Activo';
@@ -228,7 +248,7 @@ function initEventListeners() {
     }
   });
 
-  document.getElementById('btn-sync-outlook').addEventListener('click', triggerOutlookSync);
+  document.getElementById('btn-sync-outlook').addEventListener('click', handleSyncClick);
 }
 
 function togglePlayback() {
@@ -290,13 +310,23 @@ function resetPlayback() {
   renderDashboard(1);
 }
 
-async function triggerOutlookSync() {
+async function handleSyncClick() {
+  if (!isLocalEnvironment()) {
+    alert(
+      "📌 ESTÁS EN LA VERSIÓN WEB DE INTERNET (GitHub):\n\n" +
+      "• Para actualizar nuevos datos desde tu computadora, dale doble clic al archivo 'Actualizar_R358_Dashboard.bat' en tu Escritorio.\n\n" +
+      "• La actualización también se realiza automáticamente cada hora mientras tu computadora esté encendida.\n\n" +
+      "• Para sincronizar manualmente desde el navegador, abre la versión local: http://localhost:8555"
+    );
+    return;
+  }
+
   const btn = document.getElementById('btn-sync-outlook');
   const icon = document.getElementById('sync-icon');
   
   btn.disabled = true;
   btn.classList.add('opacity-75', 'cursor-not-allowed');
-  icon.classList.add('animate-spin');
+  if (icon) icon.classList.add('animate-spin');
   btn.querySelector('span').textContent = 'Sincronizando...';
 
   try {
@@ -320,11 +350,11 @@ async function triggerOutlookSync() {
     }
   } catch (err) {
     console.error('Error sincronizando:', err);
-    alert('No se pudo sincronizar. Verifica que server.py esté activo.');
+    alert('No se pudo sincronizar automáticamente. Verifica que server.py esté activo.');
   } finally {
     btn.disabled = false;
     btn.classList.remove('opacity-75', 'cursor-not-allowed');
-    icon.classList.remove('animate-spin');
+    if (icon) icon.classList.remove('animate-spin');
     btn.querySelector('span').textContent = 'Sincronizar Outlook';
   }
 }
@@ -498,7 +528,6 @@ function updateKPIs(records) {
   document.getElementById('kpi-var-cli').textContent = `${formatNumber(latest.vc_m)} cli`;
 }
 
-// Single Line Chart
 function renderLineChartSingle(containerId, chartRef, setChartRef, records, fieldKey, seriesName, strokeColor, isDesembolso = false) {
   const categories = records.map(r => r.timeLabel);
   const dataValues = records.map(r => r[fieldKey] || 0);
@@ -515,7 +544,7 @@ function renderLineChartSingle(containerId, chartRef, setChartRef, records, fiel
       toolbar: {
         show: true,
         offsetX: -10,
-        offsetY: -48, // Placed up in the header row next to the badge!
+        offsetY: -53,
         tools: { download: true, selection: true, zoom: true, zoomin: true, zoomout: true, pan: true, reset: true }
       },
       zoom: { enabled: true }
@@ -532,7 +561,6 @@ function renderLineChartSingle(containerId, chartRef, setChartRef, records, fiel
       strokeWidth: 2,
       hover: { size: 9 }
     },
-    // DATA LABELS: WHITE NUMBERS WITHOUT BACKGROUND
     dataLabels: {
       enabled: true,
       formatter: function (val) {
@@ -546,9 +574,7 @@ function renderLineChartSingle(containerId, chartRef, setChartRef, records, fiel
         fontWeight: 'bold',
         colors: ['#ffffff']
       },
-      background: {
-        enabled: false
-      },
+      background: { enabled: false },
       dropShadow: {
         enabled: true,
         top: 1,
@@ -565,7 +591,6 @@ function renderLineChartSingle(containerId, chartRef, setChartRef, records, fiel
       xaxis: { lines: { show: true } },
       yaxis: { lines: { show: true } }
     },
-    // PROMINENT HIGHLIGHTED ZERO AXIS
     annotations: {
       yaxis: [{
         y: 0,
@@ -617,7 +642,6 @@ function renderLineChartSingle(containerId, chartRef, setChartRef, records, fiel
   setChartRef(newChart);
 }
 
-// Multi-Line Chart
 function renderApexMultiLine(containerId, chartRef, setChartRef, categories, seriesList, metricTitle, isDesembolso = false) {
   const options = {
     series: seriesList.map(s => ({
@@ -631,7 +655,7 @@ function renderApexMultiLine(containerId, chartRef, setChartRef, categories, ser
       toolbar: {
         show: true,
         offsetX: -10,
-        offsetY: -48,
+        offsetY: -53,
         tools: { download: true, selection: true, zoom: true, zoomin: true, zoomout: true, pan: true, reset: true }
       }
     },
