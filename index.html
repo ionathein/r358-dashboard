@@ -33,21 +33,27 @@
       color: #ffffff !important;
       border-color: #3b82f6 !important;
     }
-    /* Move ApexCharts floating toolbar outside the plot area up to header level */
+    /* Perfectly align ApexCharts toolbar beside Eje 0 Badge */
     .apexcharts-toolbar {
-      top: -46px !important;
-      right: 140px !important;
-      background: #111827 !important;
-      border: 1px solid #374151 !important;
+      top: -53px !important;
+      right: 165px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      height: 32px !important;
+      background: #0f172a !important;
+      border: 1px solid #334155 !important;
       border-radius: 8px !important;
-      padding: 3px 8px !important;
+      padding: 0 6px !important;
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4) !important;
       z-index: 20 !important;
+      gap: 2px !important;
     }
     .apexcharts-toolbar svg {
       fill: #94a3b8 !important;
-      transform: scale(0.9);
+      transform: scale(0.85);
       transition: fill 0.2s ease;
+      vertical-align: middle !important;
     }
     .apexcharts-toolbar svg:hover {
       fill: #ffffff !important;
@@ -145,7 +151,6 @@
       <!-- MEMBER BAR & COMPARISON BUTTON -->
       <div class="mt-4 pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div class="flex items-center gap-2">
-          <!-- Multi-comparison Button -->
           <button id="btn-compare-all" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center gap-1.5 transition shadow-md shadow-indigo-950/50">
             <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
             <span id="btn-compare-all-label">👥 Comparar Todos los Integrantes</span>
@@ -226,7 +231,7 @@
       
       <!-- CHART 1: VARIACION DEL MES - CARTERA BRUTA -->
       <div class="chart-card p-5 shadow-2xl">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-800">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-800 min-h-[48px]">
           <div class="flex items-center gap-3">
             <span class="w-3.5 h-3.5 rounded-full bg-blue-500 ring-4 ring-blue-500/20"></span>
             <div>
@@ -238,17 +243,17 @@
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <span class="text-xs font-mono px-2.5 py-1 rounded bg-slate-900 text-amber-300 border border-amber-500/30 font-bold">
+            <span class="h-[32px] flex items-center px-3 rounded-lg bg-slate-900 text-amber-300 border border-amber-500/30 font-bold font-mono text-xs shadow-sm">
               ━━ Eje 0 Resaltado
             </span>
           </div>
         </div>
-        <div id="apex-chart-var-mes" class="w-full h-80 pt-2"></div>
+        <div id="apex-chart-var-mes" class="w-full h-80 pt-1"></div>
       </div>
 
       <!-- CHART 2: VARIACION DEL DIA - CARTERA BRUTA -->
       <div class="chart-card p-5 shadow-2xl">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-800">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-800 min-h-[48px]">
           <div class="flex items-center gap-3">
             <span class="w-3.5 h-3.5 rounded-full bg-teal-400 ring-4 ring-teal-400/20"></span>
             <div>
@@ -260,17 +265,17 @@
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <span class="text-xs font-mono px-2.5 py-1 rounded bg-slate-900 text-teal-300 border border-teal-500/30 font-bold">
+            <span class="h-[32px] flex items-center px-3 rounded-lg bg-slate-900 text-amber-300 border border-amber-500/30 font-bold font-mono text-xs shadow-sm">
               ━━ Eje 0 Resaltado
             </span>
           </div>
         </div>
-        <div id="apex-chart-var-dia" class="w-full h-80 pt-2"></div>
+        <div id="apex-chart-var-dia" class="w-full h-80 pt-1"></div>
       </div>
 
       <!-- CHART 3: DESEMBOLSO DEL DIA -->
       <div class="chart-card p-5 shadow-2xl">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-800">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-800 min-h-[48px]">
           <div class="flex items-center gap-3">
             <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20"></span>
             <div>
@@ -282,12 +287,12 @@
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <span class="text-xs font-mono px-2.5 py-1 rounded bg-slate-900 text-emerald-300 border border-emerald-500/30 font-bold">
+            <span class="h-[32px] flex items-center px-3 rounded-lg bg-slate-900 text-emerald-300 border border-emerald-500/30 font-bold font-mono text-xs shadow-sm">
               Colocación acumulada
             </span>
           </div>
         </div>
-        <div id="apex-chart-desembolso" class="w-full h-80 pt-2"></div>
+        <div id="apex-chart-desembolso" class="w-full h-80 pt-1"></div>
       </div>
 
     </div>
