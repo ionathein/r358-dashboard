@@ -11,6 +11,7 @@ let isCompareAllMode = false;
 let chartVarMes = null;
 let chartVarDia = null;
 let chartDesembolso = null;
+let chartVarCli = null;
 
 // Playback State for Monthly Evolution
 let isPlaying = false;
@@ -34,6 +35,20 @@ function formatPercent(val) {
   return (val || 0).toFixed(2) + '%';
 }
 
+// Generates day-of-week letter + day number, e.g. L01 (Lunes 01), M02 (Martes 02), etc.
+function getDayOfWeekLabel(dateStr) {
+  if (!dateStr || !dateStr.includes('-')) return dateStr;
+  const parts = dateStr.split('-');
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10) - 1;
+  const d = parseInt(parts[2], 10);
+  const dt = new Date(y, m, d);
+  const dayOfWeek = dt.getDay(); // 0: Dom, 1: Lun, 2: Mar, 3: Mie, 4: Jue, 5: Vie, 6: Sab
+  const initials = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+  const dayNum = parts[2];
+  return `${initials[dayOfWeek]}${dayNum}`;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   await loadInitialData();
   initFilters();
@@ -51,9 +66,8 @@ function setupSyncButtonForPlatform() {
   if (!btn) return;
 
   if (!isLocalEnvironment()) {
-    // We are on GitHub Pages / Cloud
-    btn.innerHTML = `<i data-lucide="cloud-check" class="w-3.5 h-3.5"></i> <span>Info Sincronización</span>`;
-    btn.className = "px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold flex items-center gap-2 transition text-xs border border-slate-700";
+    btn.innerHTML = `<i data-lucide="cloud-check" class="w-3 h-3"></i> <span>Info Sync</span>`;
+    btn.className = "px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold flex items-center gap-1.5 transition text-xs border border-slate-700";
     if (window.lucide) lucide.createIcons();
   }
 }
@@ -97,7 +111,7 @@ function updateDateDropdown() {
   const dateSelect = document.getElementById('filter-date');
   
   if (dates.length > 0) {
-    dateSelect.innerHTML = dates.map(d => `<option value="${d}">${d}</option>`).join('');
+    dateSelect.innerHTML = dates.map(d => `<option value="${d}">${d} (${getDayOfWeekLabel(d)})</option>`).join('');
     selectedDate = dates[dates.length - 1];
     dateSelect.value = selectedDate;
 
@@ -105,7 +119,7 @@ function updateDateDropdown() {
     if (slider) {
       slider.max = dates.length;
       slider.value = dates.length;
-      document.getElementById('playback-day-label').textContent = dates[dates.length - 1].slice(8);
+      document.getElementById('playback-day-label').textContent = getDayOfWeekLabel(dates[dates.length - 1]);
     }
   } else {
     dateSelect.innerHTML = `<option value="">Sin datos</option>`;
@@ -118,8 +132,8 @@ function updateAnalystDropdown() {
   const monthMembers = Array.from(new Set(CURRENT_DATA.filter(r => r.cat === 'ANALISTA').map(r => r.name))).sort();
   const list = monthMembers.length > 0 ? monthMembers : SUMMARY.analysts;
 
-  let optionsHtml = '<option value="COMPARE_ALL">👥 COMPARAR TODOS LOS INTEGRANTES</option>';
-  optionsHtml += '<option value="TOTAL COMITÉ">⭐ TOTAL COMITÉ (Consolidado)</option>';
+  let optionsHtml = '<option value="COMPARE_ALL">👥 COMPARAR TODOS</option>';
+  optionsHtml += '<option value="TOTAL COMITÉ">⭐ TOTAL COMITÉ</option>';
   optionsHtml += list.map(a => `<option value="${a}" ${!isCompareAllMode && a === selectedAnalyst ? 'selected' : ''}>${a}</option>`).join('');
   analystSelect.innerHTML = optionsHtml;
 
@@ -140,12 +154,12 @@ function renderAnalystChips() {
     const color = PALETTE[i % PALETTE.length];
     return `
       <button onclick="selectAnalyst('${a}')" 
-        class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition flex items-center gap-1.5 border ${
+        class="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold transition flex items-center gap-1 border ${
           isSelected 
-            ? 'bg-blue-600 text-white border-blue-400 shadow-md ring-1 ring-blue-400/50' 
+            ? 'bg-blue-600 text-white border-blue-400 shadow-sm ring-1 ring-blue-400/50' 
             : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white hover:border-slate-700'
         }">
-        <span class="w-2 h-2 rounded-full" style="background-color: ${color}"></span>
+        <span class="w-1.5 h-1.5 rounded-full" style="background-color: ${color}"></span>
         ${a}
       </button>
     `;
@@ -178,10 +192,10 @@ function updateCompareButtonUI() {
   if (!btn) return;
   if (isCompareAllMode) {
     btn.classList.add('active-toggle', 'ring-2', 'ring-blue-400');
-    document.getElementById('btn-compare-all-label').textContent = '✓ Modo Comparativo Activo';
+    document.getElementById('btn-compare-all-label').textContent = '✓ Modo Comparativo';
   } else {
     btn.classList.remove('active-toggle', 'ring-2', 'ring-blue-400');
-    document.getElementById('btn-compare-all-label').textContent = '👥 Comparar Todos los Integrantes';
+    document.getElementById('btn-compare-all-label').textContent = '👥 Comparar Todos';
   }
 }
 
@@ -243,7 +257,7 @@ function initEventListeners() {
     const idx = parseInt(e.target.value) - 1;
     if (dates[idx]) {
       playbackCurrentDayIdx = idx;
-      document.getElementById('playback-day-label').textContent = dates[idx].slice(8);
+      document.getElementById('playback-day-label').textContent = getDayOfWeekLabel(dates[idx]);
       renderDashboard(idx + 1);
     }
   });
@@ -281,7 +295,7 @@ function startPlayback() {
       return;
     }
     document.getElementById('playback-slider').value = playbackCurrentDayIdx + 1;
-    document.getElementById('playback-day-label').textContent = dates[playbackCurrentDayIdx].slice(8);
+    document.getElementById('playback-day-label').textContent = getDayOfWeekLabel(dates[playbackCurrentDayIdx]);
     renderDashboard(playbackCurrentDayIdx + 1);
   }, speedMs);
 }
@@ -293,7 +307,7 @@ function pausePlayback() {
     playbackTimer = null;
   }
   const btnText = document.getElementById('play-text');
-  if (btnText) btnText.textContent = 'Reproducir Mes';
+  if (btnText) btnText.textContent = 'Iniciar';
   const icon = document.getElementById('play-icon');
   if (icon) icon.setAttribute('data-lucide', 'play');
   lucide.createIcons();
@@ -305,7 +319,7 @@ function resetPlayback() {
   const dates = (SUMMARY.dates_by_month && SUMMARY.dates_by_month[selectedMonth]) ? SUMMARY.dates_by_month[selectedMonth] : [];
   document.getElementById('playback-slider').value = 1;
   if (dates.length > 0) {
-    document.getElementById('playback-day-label').textContent = dates[0].slice(8);
+    document.getElementById('playback-day-label').textContent = getDayOfWeekLabel(dates[0]);
   }
   renderDashboard(1);
 }
@@ -314,9 +328,8 @@ async function handleSyncClick() {
   if (!isLocalEnvironment()) {
     alert(
       "📌 ESTÁS EN LA VERSIÓN WEB DE INTERNET (GitHub):\n\n" +
-      "• Para actualizar nuevos datos desde tu computadora, dale doble clic al archivo 'Actualizar_R358_Dashboard.bat' en tu Escritorio.\n\n" +
-      "• La actualización también se realiza automáticamente cada hora mientras tu computadora esté encendida.\n\n" +
-      "• Para sincronizar manualmente desde el navegador, abre la versión local: http://localhost:8555"
+      "• Para actualizar datos, ejecuta 'Actualizar_R358_Dashboard.bat' en tu Escritorio.\n\n" +
+      "• También se actualiza automáticamente cada hora."
     );
     return;
   }
@@ -364,13 +377,15 @@ function renderDashboard(limitDaysCount = null) {
   document.getElementById('badge-analyst-1').textContent = badgeLabel;
   document.getElementById('badge-analyst-2').textContent = badgeLabel;
   document.getElementById('badge-analyst-3').textContent = badgeLabel;
+  document.getElementById('badge-analyst-4').textContent = badgeLabel;
 
   const monthMembers = Array.from(new Set(CURRENT_DATA.filter(r => r.cat === 'ANALISTA').map(r => r.name))).sort();
 
   if (selectedTimeMode === 'hourly') {
-    document.getElementById('chart1-subtitle').textContent = `Eje X: 08:00 a 23:00 hrs • Día: ${selectedDate} • Eje Y: Variación del Mes Cartera Bruta`;
-    document.getElementById('chart2-subtitle').textContent = `Eje X: 08:00 a 23:00 hrs • Día: ${selectedDate} • Eje Y: Variación del Día Cartera Bruta`;
-    document.getElementById('chart3-subtitle').textContent = `Eje X: 08:00 a 23:00 hrs • Día: ${selectedDate} • Eje Y: Desembolso del Día`;
+    document.getElementById('chart1-subtitle').textContent = `Evolución Hora a Hora (08:00 - 23:00) • Día: ${selectedDate}`;
+    document.getElementById('chart2-subtitle').textContent = `Crecimiento o Caída Neta del Día • Día: ${selectedDate}`;
+    document.getElementById('chart3-subtitle').textContent = `Monto Total Desembolsado del Día • Día: ${selectedDate}`;
+    document.getElementById('chart4-subtitle').textContent = `Variación Neta de Clientes en el Mes al Corte ${selectedDate}`;
 
     const dayRecords = CURRENT_DATA.filter(r => r.date === selectedDate);
     const hours = Array.from(new Set(dayRecords.map(r => r.time))).sort();
@@ -379,34 +394,23 @@ function renderDashboard(limitDaysCount = null) {
       const seriesVarMes = [];
       const seriesVarDia = [];
       const seriesDesemb = [];
+      const seriesVarCli = [];
 
       monthMembers.forEach((m, idx) => {
         const mRecords = dayRecords.filter(r => r.name === m);
         const map = {};
         mRecords.forEach(r => { map[r.time] = r; });
 
-        seriesVarMes.push({
-          name: m,
-          data: hours.map(h => map[h] ? map[h].vcb_m : 0),
-          color: PALETTE[idx % PALETTE.length]
-        });
-
-        seriesVarDia.push({
-          name: m,
-          data: hours.map(h => map[h] ? map[h].vcb_d : 0),
-          color: PALETTE[idx % PALETTE.length]
-        });
-
-        seriesDesemb.push({
-          name: m,
-          data: hours.map(h => map[h] ? map[h].mto_des : 0),
-          color: PALETTE[idx % PALETTE.length]
-        });
+        seriesVarMes.push({ name: m, data: hours.map(h => map[h] ? map[h].vcb_m : 0), color: PALETTE[idx % PALETTE.length] });
+        seriesVarDia.push({ name: m, data: hours.map(h => map[h] ? map[h].vcb_d : 0), color: PALETTE[idx % PALETTE.length] });
+        seriesDesemb.push({ name: m, data: hours.map(h => map[h] ? map[h].mto_des : 0), color: PALETTE[idx % PALETTE.length] });
+        seriesVarCli.push({ name: m, data: hours.map(h => map[h] ? map[h].vc_m : 0), color: PALETTE[idx % PALETTE.length] });
       });
 
-      renderApexMultiLine('apex-chart-var-mes', chartVarMes, (c) => chartVarMes = c, hours, seriesVarMes, 'Var Mes Cartera');
-      renderApexMultiLine('apex-chart-var-dia', chartVarDia, (c) => chartVarDia = c, hours, seriesVarDia, 'Var Día Cartera');
-      renderApexMultiLine('apex-chart-desembolso', chartDesembolso, (c) => chartDesembolso = c, hours, seriesDesemb, 'Desembolso Día', true);
+      renderApexMultiLine('apex-chart-var-mes', chartVarMes, (c) => chartVarMes = c, hours, seriesVarMes, 'Var Mes Cartera', 'currency');
+      renderApexMultiLine('apex-chart-var-dia', chartVarDia, (c) => chartVarDia = c, hours, seriesVarDia, 'Var Día Cartera', 'currency');
+      renderApexMultiLine('apex-chart-desembolso', chartDesembolso, (c) => chartDesembolso = c, hours, seriesDesemb, 'Desembolso Día', 'currency');
+      renderApexMultiLine('apex-chart-var-cli', chartVarCli, (c) => chartVarCli = c, hours, seriesVarCli, 'Var Clientes Mes', 'integer');
 
       renderTradingTable(dayRecords);
       updateKPIs(dayRecords);
@@ -424,30 +428,34 @@ function renderDashboard(limitDaysCount = null) {
         return { ...rec, timeLabel: rec.time };
       });
 
-      renderLineChartSingle('apex-chart-var-mes', chartVarMes, (c) => chartVarMes = c, records, 'vcb_m', 'Var Mes Cartera', '#3b82f6');
-      renderLineChartSingle('apex-chart-var-dia', chartVarDia, (c) => chartVarDia = c, records, 'vcb_d', 'Var Día Cartera', '#14b8a6');
-      renderLineChartSingle('apex-chart-desembolso', chartDesembolso, (c) => chartDesembolso = c, records, 'mto_des', 'Desembolso Día', '#10b981', true);
+      renderLineChartSingle('apex-chart-var-mes', chartVarMes, (c) => chartVarMes = c, records, 'vcb_m', 'Var Mes Cartera', '#3b82f6', 'currency');
+      renderLineChartSingle('apex-chart-var-dia', chartVarDia, (c) => chartVarDia = c, records, 'vcb_d', 'Var Día Cartera', '#14b8a6', 'currency');
+      renderLineChartSingle('apex-chart-desembolso', chartDesembolso, (c) => chartDesembolso = c, records, 'mto_des', 'Desembolso Día', '#10b981', 'currency');
+      renderLineChartSingle('apex-chart-var-cli', chartVarCli, (c) => chartVarCli = c, records, 'vc_m', 'Var Clientes Mes', '#a855f7', 'integer');
 
       renderTradingTable(records);
       updateKPIs(records);
     }
 
   } else {
-    document.getElementById('chart1-subtitle').textContent = `Eje X: Día 01 al 31 (${selectedMonth}) • Eje Y: Variación del Mes Cartera Bruta`;
-    document.getElementById('chart2-subtitle').textContent = `Eje X: Día 01 al 31 (${selectedMonth}) • Eje Y: Variación del Día Cartera Bruta`;
-    document.getElementById('chart3-subtitle').textContent = `Eje X: Día 01 al 31 (${selectedMonth}) • Eje Y: Desembolso del Día`;
+    // MONTHLY VIEW WITH DAY-OF-WEEK INITIALS (e.g. L01, M02, M03, J04, V05, S06, D07...)
+    document.getElementById('chart1-subtitle').textContent = `Evolución Diaria del Mes (${selectedMonth})`;
+    document.getElementById('chart2-subtitle').textContent = `Crecimiento o Caída Diaria de Cartera (${selectedMonth})`;
+    document.getElementById('chart3-subtitle').textContent = `Colocación Diaria del Mes (${selectedMonth})`;
+    document.getElementById('chart4-subtitle').textContent = `Evolución Diaria de Clientes del Mes (${selectedMonth})`;
 
     let dates = (SUMMARY.dates_by_month && SUMMARY.dates_by_month[selectedMonth]) ? SUMMARY.dates_by_month[selectedMonth] : [];
     if (limitDaysCount && limitDaysCount > 0 && limitDaysCount <= dates.length) {
       dates = dates.slice(0, limitDaysCount);
     }
 
-    const xLabels = dates.map(d => `D${d.slice(8)}`);
+    const xLabels = dates.map(d => getDayOfWeekLabel(d));
 
     if (isCompareAllMode) {
       const seriesVarMes = [];
       const seriesVarDia = [];
       const seriesDesemb = [];
+      const seriesVarCli = [];
 
       monthMembers.forEach((m, idx) => {
         const mRecords = CURRENT_DATA.filter(r => r.name === m);
@@ -456,28 +464,16 @@ function renderDashboard(limitDaysCount = null) {
           if (!dayMap[r.date] || r.dt > dayMap[r.date].dt) dayMap[r.date] = r;
         });
 
-        seriesVarMes.push({
-          name: m,
-          data: dates.map(d => dayMap[d] ? dayMap[d].vcb_m : 0),
-          color: PALETTE[idx % PALETTE.length]
-        });
-
-        seriesVarDia.push({
-          name: m,
-          data: dates.map(d => dayMap[d] ? dayMap[d].vcb_d : 0),
-          color: PALETTE[idx % PALETTE.length]
-        });
-
-        seriesDesemb.push({
-          name: m,
-          data: dates.map(d => dayMap[d] ? dayMap[d].mto_des : 0),
-          color: PALETTE[idx % PALETTE.length]
-        });
+        seriesVarMes.push({ name: m, data: dates.map(d => dayMap[d] ? dayMap[d].vcb_m : 0), color: PALETTE[idx % PALETTE.length] });
+        seriesVarDia.push({ name: m, data: dates.map(d => dayMap[d] ? dayMap[d].vcb_d : 0), color: PALETTE[idx % PALETTE.length] });
+        seriesDesemb.push({ name: m, data: dates.map(d => dayMap[d] ? dayMap[d].mto_des : 0), color: PALETTE[idx % PALETTE.length] });
+        seriesVarCli.push({ name: m, data: dates.map(d => dayMap[d] ? dayMap[d].vc_m : 0), color: PALETTE[idx % PALETTE.length] });
       });
 
-      renderApexMultiLine('apex-chart-var-mes', chartVarMes, (c) => chartVarMes = c, xLabels, seriesVarMes, 'Var Mes Cartera');
-      renderApexMultiLine('apex-chart-var-dia', chartVarDia, (c) => chartVarDia = c, xLabels, seriesVarDia, 'Var Día Cartera');
-      renderApexMultiLine('apex-chart-desembolso', chartDesembolso, (c) => chartDesembolso = c, xLabels, seriesDesemb, 'Desembolso Día', true);
+      renderApexMultiLine('apex-chart-var-mes', chartVarMes, (c) => chartVarMes = c, xLabels, seriesVarMes, 'Var Mes Cartera', 'currency');
+      renderApexMultiLine('apex-chart-var-dia', chartVarDia, (c) => chartVarDia = c, xLabels, seriesVarDia, 'Var Día Cartera', 'currency');
+      renderApexMultiLine('apex-chart-desembolso', chartDesembolso, (c) => chartDesembolso = c, xLabels, seriesDesemb, 'Desembolso Día', 'currency');
+      renderApexMultiLine('apex-chart-var-cli', chartVarCli, (c) => chartVarCli = c, xLabels, seriesVarCli, 'Var Clientes Mes', 'integer');
 
       const latestDate = dates[dates.length - 1];
       const snapshotRecords = CURRENT_DATA.filter(r => r.date === latestDate);
@@ -494,15 +490,16 @@ function renderDashboard(limitDaysCount = null) {
         if (dayRecs.length > 0) {
           const lastRec = dayRecs.reduce((max, r) => r.dt > max ? r.dt : max, dayRecs[0].dt);
           const rec = dayRecs.find(r => r.dt === lastRec) || dayRecs[0];
-          return { ...rec, timeLabel: `D${d.slice(8)}` };
+          return { ...rec, timeLabel: getDayOfWeekLabel(d) };
         } else {
-          return { date: d, timeLabel: `D${d.slice(8)}`, vcb_m: 0, vcb_d: 0, mto_des: 0, num_des: 0, cb: 0, ca: 0, pm: 0, vc_m: 0 };
+          return { date: d, timeLabel: getDayOfWeekLabel(d), vcb_m: 0, vcb_d: 0, mto_des: 0, num_des: 0, cb: 0, ca: 0, pm: 0, vc_m: 0 };
         }
       });
 
-      renderLineChartSingle('apex-chart-var-mes', chartVarMes, (c) => chartVarMes = c, records, 'vcb_m', 'Var Mes Cartera', '#3b82f6');
-      renderLineChartSingle('apex-chart-var-dia', chartVarDia, (c) => chartVarDia = c, records, 'vcb_d', 'Var Día Cartera', '#14b8a6');
-      renderLineChartSingle('apex-chart-desembolso', chartDesembolso, (c) => chartDesembolso = c, records, 'mto_des', 'Desembolso Día', '#10b981', true);
+      renderLineChartSingle('apex-chart-var-mes', chartVarMes, (c) => chartVarMes = c, records, 'vcb_m', 'Var Mes Cartera', '#3b82f6', 'currency');
+      renderLineChartSingle('apex-chart-var-dia', chartVarDia, (c) => chartVarDia = c, records, 'vcb_d', 'Var Día Cartera', '#14b8a6', 'currency');
+      renderLineChartSingle('apex-chart-desembolso', chartDesembolso, (c) => chartDesembolso = c, records, 'mto_des', 'Desembolso Día', '#10b981', 'currency');
+      renderLineChartSingle('apex-chart-var-cli', chartVarCli, (c) => chartVarCli = c, records, 'vc_m', 'Var Clientes Mes', '#a855f7', 'integer');
 
       renderTradingTable(records);
       updateKPIs(records);
@@ -516,11 +513,11 @@ function updateKPIs(records) {
 
   const kpiVarMesEl = document.getElementById('kpi-var-mes-cart');
   kpiVarMesEl.textContent = formatCurrency(latest.vcb_m);
-  kpiVarMesEl.className = `text-base font-bold font-mono ${latest.vcb_m >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+  kpiVarMesEl.className = `text-xs font-bold font-mono ${latest.vcb_m >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
 
   const kpiVarDiaEl = document.getElementById('kpi-var-dia-cart');
   kpiVarDiaEl.textContent = formatCurrency(latest.vcb_d);
-  kpiVarDiaEl.className = `text-base font-bold font-mono ${latest.vcb_d >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+  kpiVarDiaEl.className = `text-xs font-bold font-mono ${latest.vcb_d >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
 
   document.getElementById('kpi-desemb-dia').textContent = formatCurrency(latest.mto_des);
   document.getElementById('kpi-cart-bruta').textContent = formatCurrency(latest.cb);
@@ -528,7 +525,7 @@ function updateKPIs(records) {
   document.getElementById('kpi-var-cli').textContent = `${formatNumber(latest.vc_m)} cli`;
 }
 
-function renderLineChartSingle(containerId, chartRef, setChartRef, records, fieldKey, seriesName, strokeColor, isDesembolso = false) {
+function renderLineChartSingle(containerId, chartRef, setChartRef, records, fieldKey, seriesName, strokeColor, valType = 'currency') {
   const categories = records.map(r => r.timeLabel);
   const dataValues = records.map(r => r[fieldKey] || 0);
 
@@ -564,7 +561,9 @@ function renderLineChartSingle(containerId, chartRef, setChartRef, records, fiel
     dataLabels: {
       enabled: true,
       formatter: function (val) {
-        if (isDesembolso && val === 0) return '0';
+        if (valType === 'integer') {
+          return `${val > 0 ? '+' : ''}${formatNumber(val)} cli`;
+        }
         return formatCurrency(val);
       },
       offsetY: -8,
@@ -612,7 +611,7 @@ function renderLineChartSingle(containerId, chartRef, setChartRef, records, fiel
     xaxis: {
       categories: categories,
       title: {
-        text: selectedTimeMode === 'hourly' ? 'Horas del Día (Cortes R358)' : 'Días del Mes',
+        text: selectedTimeMode === 'hourly' ? 'Horas del Día (Cortes R358)' : 'Días del Mes (D:Dom, L:Lun, M:Mar, M:Mié, J:Jue, V:Vie, S:Sáb)',
         style: { color: '#94a3b8', fontSize: '11px', fontWeight: 'bold' }
       },
       labels: {
@@ -622,17 +621,17 @@ function renderLineChartSingle(containerId, chartRef, setChartRef, records, fiel
     },
     yaxis: {
       title: {
-        text: `${seriesName} (S/.)`,
+        text: `${seriesName} ${valType === 'currency' ? '(S/.)' : '(# Cli)'}`,
         style: { color: strokeColor, fontSize: '11px', fontWeight: 'bold' }
       },
       labels: {
         style: { colors: '#94a3b8', fontSize: '11px', fontFamily: 'monospace' },
-        formatter: (val) => formatCurrency(val)
+        formatter: (val) => valType === 'currency' ? formatCurrency(val) : `${formatNumber(val)} cli`
       }
     },
     tooltip: {
       theme: 'dark',
-      y: { formatter: (val) => formatCurrency(val) }
+      y: { formatter: (val) => valType === 'currency' ? formatCurrency(val) : `${formatNumber(val)} clientes` }
     }
   };
 
@@ -642,7 +641,7 @@ function renderLineChartSingle(containerId, chartRef, setChartRef, records, fiel
   setChartRef(newChart);
 }
 
-function renderApexMultiLine(containerId, chartRef, setChartRef, categories, seriesList, metricTitle, isDesembolso = false) {
+function renderApexMultiLine(containerId, chartRef, setChartRef, categories, seriesList, metricTitle, valType = 'currency') {
   const options = {
     series: seriesList.map(s => ({
       name: s.name,
@@ -671,7 +670,7 @@ function renderApexMultiLine(containerId, chartRef, setChartRef, categories, ser
     },
     dataLabels: {
       enabled: seriesList.length <= 3,
-      formatter: (val) => formatCurrency(val),
+      formatter: (val) => valType === 'currency' ? formatCurrency(val) : `${formatNumber(val)} cli`,
       offsetY: -6,
       style: {
         fontSize: '10px',
@@ -712,7 +711,7 @@ function renderApexMultiLine(containerId, chartRef, setChartRef, categories, ser
     xaxis: {
       categories: categories,
       title: {
-        text: selectedTimeMode === 'hourly' ? 'Horas del Día' : 'Días del Mes',
+        text: selectedTimeMode === 'hourly' ? 'Horas del Día' : 'Días del Mes (D:Dom, L:Lun, M:Mar, M:Mié, J:Jue, V:Vie, S:Sáb)',
         style: { color: '#94a3b8', fontSize: '11px', fontWeight: 'bold' }
       },
       labels: {
@@ -721,19 +720,19 @@ function renderApexMultiLine(containerId, chartRef, setChartRef, categories, ser
     },
     yaxis: {
       title: {
-        text: `${metricTitle} (S/.)`,
+        text: `${metricTitle} ${valType === 'currency' ? '(S/.)' : '(# Cli)'}`,
         style: { color: '#94a3b8', fontSize: '11px', fontWeight: 'bold' }
       },
       labels: {
         style: { colors: '#94a3b8', fontSize: '11px', fontFamily: 'monospace' },
-        formatter: (val) => formatCurrency(val)
+        formatter: (val) => valType === 'currency' ? formatCurrency(val) : `${formatNumber(val)} cli`
       }
     },
     tooltip: {
       theme: 'dark',
       shared: true,
       intersect: false,
-      y: { formatter: (val) => formatCurrency(val) }
+      y: { formatter: (val) => valType === 'currency' ? formatCurrency(val) : `${formatNumber(val)} clientes` }
     }
   };
 
